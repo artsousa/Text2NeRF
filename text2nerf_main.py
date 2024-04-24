@@ -3,6 +3,7 @@ import os
 import random
 import shutil
 import sys
+import pprint
 # from sympy import false
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -20,17 +21,23 @@ from dataLoader.bilateral_filtering import sparse_bilateral_filtering
 from scripts.depth_esti_boosting import depth_esti_boosting
 from transformers import CLIPProcessor, CLIPModel
 
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 renderer = OctreeRender_trilinear_fast
-clip_model = CLIPModel.from_pretrained("weights/clip-vit-base-patch32")
-clip_processor = CLIPProcessor.from_pretrained("weights/clip-vit-base-patch32")
+# clip_model = CLIPModel.from_pretrained("weights/clip-vit-base-patch32")
+# clip_processor = CLIPProcessor.from_pretrained("weights/clip-vit-base-patch32")
 
 @torch.no_grad()
 def render_test(args):
+
+    print(f"data name: {args.dataset_name}")
     # init dataset
     dataset = dataset_dict[args.dataset_name]
-    if not os.path.isfile(os.path.join(args.datadir, 'rgbs/%05d.png' % 0)):
+
+    f_name = os.path.join(args.datadir, 'rgbs/%05d.png' % 0)
+    if not os.path.isfile(f_name):
         args.datadir = args.datadir+'_'+args.prompt.replace(' ','_')
+
     test_dataset = dataset(args, split='test', is_stack=True)
     white_bg = test_dataset.white_bg
     ndc_ray = args.ndc_ray
@@ -490,6 +497,8 @@ def reconstruction(args):
     N_iter = 0
     n_epoch_stage2 = n_epoch_stage2_each * (poses_gen.shape[0]-1)
     n_total = n_epoch_stage1+n_epoch_stage2
+
+    print(f"Running for {n_total} epochs...:")
     for epoch in range(n_total+10):
         global_epoch += 1
 
@@ -651,6 +660,7 @@ def reconstruction(args):
 
         
 if __name__ == '__main__':
+
     torch.set_default_dtype(torch.float32)
     
     args = config_parser()
@@ -663,11 +673,14 @@ if __name__ == '__main__':
     args.N_voxel_final=27000000
     args.batch_size = 1024*16
     args.regen_pose = True
-    print(args)
+
+    pprint.pprint(vars(args))
     set_seed(args.seed)
 
     if args.render_only and (args.render_test or args.render_path):
+        print("RENDERING ONLY")
         render_test(args)
     else:
+        print("TRAINING ONLY")
         reconstruction(args)
 

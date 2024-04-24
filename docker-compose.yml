@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  app:
+    image: nvidia/cuda:12.3.0-base-ubuntu20.04
+    command: bash -c "apt-get update && apt-get install -y python3.10 && python3.10 app.py"
+    volumes:
+      - /mnt/d/WORK/WORKING/REPOS/Text2NeRF:/text2nerf
+    working_dir: /text2nerf
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: all
+            capabilities: [gpu]

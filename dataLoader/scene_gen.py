@@ -196,7 +196,7 @@ class SceneGenDataset(Dataset):
                 result_dir=self.depth_path, 
                 image_name='%05d' % self.img_id,
                 depthNet=depthNet,  # 0: MiDas, 2: LeRes
-                )
+            )
             depth_init = depth_process(depth_init, depthNet, disp_min=0.14, disp_rescale=10.0, max_depth=7.2, push_depth=push_depth)
         else:
             depth_fname = os.path.join(self.depth_path, '%05d.png' % self.img_id)
@@ -206,6 +206,7 @@ class SceneGenDataset(Dataset):
             except:
                 depth_init = np.load(depth_fname.replace('png', 'npy'))
                 depth_init = (depth_init / 2).astype(np.float32)
+        
         imageio.imwrite(os.path.join(self.depth_path, '%05d_before_filter.png' % self.img_id), depth_init)
         if self.crop_square:
             depth_init = depth_init[:l_min, :l_min]
@@ -221,6 +222,7 @@ class SceneGenDataset(Dataset):
             depth_threshold=0.02, num_iter=4, HR=False, mask=None)
         depth_init = vis_depths[-1]
         img_init = vis_photos[-1]
+
         imageio.imwrite(os.path.join(self.depth_path, '%05d_after_filter.png' % self.img_id), depth_init)
         imageio.imwrite(os.path.join(self.rgb_path, '%05d_after_filter.png' % self.img_id), img_init)
 
