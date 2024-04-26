@@ -154,7 +154,7 @@ def gt_warping(rgb_gt, depth_gt, pose_gt, poses_tar, H, W, intrinsic, logpath=No
             if warp_depth:
                 depths_warp.append(warped_depth2)
                 if logpath is not None:
-                    imageio.imwrite(os.path.join(save_path_warp, 'warped_depth', '%05d.png' % (vv+1)), depths_warp[-1])
+                    imageio.imwrite(os.path.join(save_path_warp, 'warped_depth', '%05d.png' % (vv+1)), Image.fromarray(depths_warp[-1]).convert('L'))
             mask_image = (mask2 * 255).astype(np.uint8)
             mask_inv = ((1 - mask2) * 255).astype(np.uint8)
             if logpath is not None:

@@ -24,8 +24,8 @@ from transformers import CLIPProcessor, CLIPModel
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 renderer = OctreeRender_trilinear_fast
-# clip_model = CLIPModel.from_pretrained("weights/clip-vit-base-patch32")
-# clip_processor = CLIPProcessor.from_pretrained("weights/clip-vit-base-patch32")
+clip_model = CLIPModel.from_pretrained("weights/clip-vit-base-patch32")
+clip_processor = CLIPProcessor.from_pretrained("weights/clip-vit-base-patch32")
 
 @torch.no_grad()
 def render_test(args):
@@ -145,10 +145,10 @@ def render_warping_inapinting(N_iter, tensorf, renderer, dataset, poses, H, W, i
     output_image_warp = (output_image_warp * 255).astype(np.uint8)
     mask_image = (myMap_filt * 255).astype(np.uint8)
     mask_inv = ((1 - myMap_filt) * 255).astype(np.uint8)
-    imageio.imwrite(os.path.join(save_path_warp, 'warped', '%05d.png' % N_iter), output_image_warp)
-    imageio.imwrite(os.path.join(save_path_warp, 'warped', '%05d_depth.png' % N_iter), output_depth)
-    imageio.imwrite(os.path.join(save_path_warp, 'mask', '%05d.png' % N_iter), mask_image)
-    imageio.imwrite(os.path.join(save_path_warp, 'mask_inv', '%05d.png' % N_iter), mask_inv)
+    imageio.imwrite(os.path.join(save_path_warp, 'warped', '%05d.png' % N_iter), Image.fromarray(output_image_warp).convert('L'))
+    imageio.imwrite(os.path.join(save_path_warp, 'warped', '%05d_depth.png' % N_iter), Image.fromarray(output_depth).convert('L'))
+    imageio.imwrite(os.path.join(save_path_warp, 'mask', '%05d.png' % N_iter), Image.fromarray(mask_image).convert('L'))
+    imageio.imwrite(os.path.join(save_path_warp, 'mask_inv', '%05d.png' % N_iter), Image.fromarray(mask_inv).convert('L'))
 
     # mask expansion
     if update_known_views:
@@ -176,8 +176,8 @@ def render_warping_inapinting(N_iter, tensorf, renderer, dataset, poses, H, W, i
     rgb_render = rgb_render.clamp(0.0, 1.0).reshape(H, W, 3).cpu().numpy()
     rgb_render = (rgb_render * 255).astype(np.uint8)
     depth_rendered = depth_rendered0.reshape(H, W).cpu().numpy() * myMap_filt
-    imageio.imwrite(os.path.join(save_path_warp, 'rendered', '%05d_ori.png' % N_iter), rgb_render)
-    imageio.imwrite(os.path.join(save_path_warp, 'rendered', '%05d_depth.png' % N_iter), depth_rendered)
+    imageio.imwrite(os.path.join(save_path_warp, 'rendered', '%05d_ori.png' % N_iter), Image.fromarray(rgb_render).convert('L'))
+    imageio.imwrite(os.path.join(save_path_warp, 'rendered', '%05d_depth.png' % N_iter), Image.fromarray(depth_rendered).convert('L'))
     rgb_render_ = rgb_render.copy()
     for i in range(3):
         rgb_render_[:,:,i] = rgb_render_[:,:,i]*myMap_filt+255*(1 - myMap_filt)
@@ -283,11 +283,14 @@ def render_warping_inapinting(N_iter, tensorf, renderer, dataset, poses, H, W, i
     depth_src = ((depth_shift - push_depth) * 12000 / 32768. - 1.) #[-1,1]
     depth_merged = merge_model.run_finetune_numpy(depth_ref.astype(np.float32), depth_src.astype(np.float32), myMap_filt.copy(), outsize=512, lr=1e-5, iter=500)
     depth_new = (depth_merged.detach().cpu().numpy() + 1.) * 32768.
-    imageio.imwrite(os.path.join(save_path_warp, 'depth', '%05d_depth_finetuning2.png' % N_iter), depth_new)
+    
+    imageio.imwrite(os.path.join(save_path_warp, 'depth', '%05d_depth_finetuning2.png' % N_iter), Image.fromarray(depth_new).convert('L'))
 
 
     depth_new = (depth_new / 12000 + push_depth).astype(np.float32)
-    imageio.imwrite(os.path.join(save_path_warp, 'depth', '%05d_depth_finetuning_masked2.png' % N_iter), depth_rendered*myMap_filt+depth_new*(1-myMap_filt))
+
+    dept_finetuning_masked2 =  depth_rendered*myMap_filt+depth_new*(1-myMap_filt)
+    imageio.imwrite(os.path.join(save_path_warp, 'depth', '%05d_depth_finetuning_masked2.png' % N_iter), Image.fromarray(dept_finetuning_masked2).convert('L'))
     img_new = imageio.imread(os.path.join(save_path_warp, 'rgbs', '%05d.png' % N_iter))
     img_new = (img_new/255.).astype(np.float32)
 
@@ -296,8 +299,10 @@ def render_warping_inapinting(N_iter, tensorf, renderer, dataset, poses, H, W, i
             depth_threshold=0.02, num_iter=4, HR=False, mask=None)
     depth_new = vis_depths[-1]
     img_new = vis_photos[-1]
-    imageio.imwrite(os.path.join(save_path_warp, 'depth', '%05d_depth_merged_aft_filter.png' % N_iter), depth_new*(1-myMap_filt)+depth_rendered*myMap_filt)
-    imageio.imwrite(os.path.join(save_path_warp, 'depth', '%05d_new.png' % N_iter), depth_new)
+
+    depth_merged_aft = depth_new*(1-myMap_filt)+depth_rendered*myMap_filt
+    imageio.imwrite(os.path.join(save_path_warp, 'depth', '%05d_depth_merged_aft_filter.png' % N_iter), Image.fromarray(depth_merged_aft).convert('L'))
+    imageio.imwrite(os.path.join(save_path_warp, 'depth', '%05d_new.png' % N_iter), Image.fromarray(depth_new).convert('L'))
 
     ## update known views with the inpainted image   all_rgbs_gen_split, all_depth_gen_split, all_masks_gen_split
     current_mask_inpainted = 1-myMap_filt
@@ -325,12 +330,12 @@ def render_warping_inapinting(N_iter, tensorf, renderer, dataset, poses, H, W, i
             pose_ref = poses_np[ii]
             img = all_rgbs_gen_split[ii].numpy()
             os.makedirs(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter), exist_ok=True)
-            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_image_pre.png'%ii), img)
-            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_image_warp.png'%ii), rgbs_warp[ii])
+            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_image_pre.png'%ii), Image.fromarray(img).convert('L'))
+            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_image_warp.png'%ii), Image.fromarray(rgbs_warp[ii]).convert('L'))
             img = img * (1-mask3) + rgbs_warp[ii] * mask3
             depth = all_depth_gen_split[ii].numpy()
-            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_depth_pre.png'%ii), depth)
-            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_depth_warp.png'%ii), depth_warp[ii])
+            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_depth_pre.png'%ii), Image.fromarray(depth).convert('L'))
+            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_depth_warp.png'%ii), Image.fromarray(depth_warp[ii]).convert('L'))
 
             with torch.no_grad():
                 depth_est = depth_esti_boosting(
@@ -347,8 +352,8 @@ def render_warping_inapinting(N_iter, tensorf, renderer, dataset, poses, H, W, i
             depth_update = merge_model.run_finetune_numpy(depth_ref.astype(np.float32), depth_est.astype(np.float32), (1-mask), outsize=512, lr=1e-5, iter=500)
             depth_update = (depth_update.detach().cpu().numpy() + 1.) * 32768.
             depth = (depth_update / 12000 + push_depth).astype(np.float32)
-            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_updated_image0.png'%ii), img)
-            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_updated_depth0.png'%ii), depth)
+            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_updated_image0.png'%ii), Image.fromarray(img).convert('L'))
+            imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_updated_depth0.png'%ii), Image.fromarray(depth).convert('L'))
             dataset.all_rgbs_gen_split[ii] = torch.tensor(img, dtype=torch.float32)
             dataset.all_depth_gen_split[ii] = torch.tensor(depth, dtype=torch.float32)
             inpaint_mask = inpaint_masks_split[ii].numpy()
@@ -358,8 +363,8 @@ def render_warping_inapinting(N_iter, tensorf, renderer, dataset, poses, H, W, i
                         depth_threshold=0.02, num_iter=4, HR=False, mask=None)
                 depth = vis_depths[-1]
                 img = vis_photos[-1]
-                imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_updated_image.png'%ii), img)
-                imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_updated_depth.png'%ii), depth)
+                imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_updated_image.png'%ii), Image.fromarray(img).convert('L'))
+                imageio.imwrite(os.path.join(save_path_warp, 'rgbs_support/%05d_warp2known'%N_iter, '%05d_updated_depth.png'%ii), Image.fromarray(depth).convert('L'))
                 poses_support = get_local_fixed_poses2(pose_ref, angle=0, range_center=args.trans_range, range_yaw=0.6, range_pitch=0.2)
                 rgbs_warp_temp, _, depth_warp_temp = gt_warping(img, depth, poses_support[0], poses_support[1:], H, W,
                                                                             #   logpath=os.path.join(save_path_warp, 'rgbs_support/%05d_%03d'%(N_iter, ii)), 

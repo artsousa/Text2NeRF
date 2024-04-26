@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  walcy-torch:
+    image: nvcr.io/nvidia/pytorch:22.11-py3
+    container_name: walcy-torch
+    runtime: nvidia # Isto pode variar dependendo da sua configuração do Docker
+    ipc: host
+    shm_size: 64G
+    volumes:
+      - /home/walcy:/home
+    dns:
+      - 8.8.8.8
+    deploy:
+      resources:
+        reservations:
+          cpus: '32.0'

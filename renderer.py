@@ -124,8 +124,9 @@ def evaluation(test_dataset, tensorf, args, renderer, savePath=None, N_vis=5,
                 imageio.imwrite(f'{savePath}/depths/{prtx}{idx:03d}_depth.png', depth_map)
 
     if video_gen:
-        imageio.mimwrite(f'{savePath}/{prtx}video.mp4', np.stack(rgb_maps), fps=30, quality=9)
-        imageio.mimwrite(f'{savePath}/{prtx}depthvideo.mp4', np.stack(depth_maps), fps=30, quality=9)
+        # quality=9
+        imageio.mimwrite(f'{savePath}/{prtx}video.mp4', np.stack(rgb_maps), fps=30)
+        imageio.mimwrite(f'{savePath}/{prtx}depthvideo.mp4', np.stack(depth_maps), fps=30)
 
     if PSNRs:
         psnr = np.mean(np.asarray(PSNRs))

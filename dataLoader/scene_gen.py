@@ -207,7 +207,7 @@ class SceneGenDataset(Dataset):
                 depth_init = np.load(depth_fname.replace('png', 'npy'))
                 depth_init = (depth_init / 2).astype(np.float32)
         
-        imageio.imwrite(os.path.join(self.depth_path, '%05d_before_filter.png' % self.img_id), depth_init)
+        imageio.imwrite(os.path.join(self.depth_path, '%05d_before_filter.png' % self.img_id), Image.fromarray(depth_init).convert('L'))
         if self.crop_square:
             depth_init = depth_init[:l_min, :l_min]
         self.scale = self.hw[0]/H
@@ -221,9 +221,9 @@ class SceneGenDataset(Dataset):
             depth_init.copy(), img_init.copy(), filter_size=[5, 5, 3, 3], 
             depth_threshold=0.02, num_iter=4, HR=False, mask=None)
         depth_init = vis_depths[-1]
-        img_init = vis_photos[-1]
-
-        imageio.imwrite(os.path.join(self.depth_path, '%05d_after_filter.png' % self.img_id), depth_init)
+        img_init = (vis_photos[-1] * 255).astype(np.uint8)
+    
+        imageio.imwrite(os.path.join(self.depth_path, '%05d_after_filter.png' % self.img_id), Image.fromarray(depth_init).convert('L'))
         imageio.imwrite(os.path.join(self.rgb_path, '%05d_after_filter.png' % self.img_id), img_init)
 
         # generate training poses
