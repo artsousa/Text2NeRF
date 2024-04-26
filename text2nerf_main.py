@@ -53,6 +53,7 @@ def render_test(args):
     tensorf.load(ckpt)
 
     logfolder = os.path.dirname(args.ckpt)
+    print(f"logFOLDER: {logfolder}")
     if args.render_train:
         os.makedirs(f'{logfolder}/imgs_train_all', exist_ok=True)
         train_dataset = dataset(args, split='train', is_stack=True)
